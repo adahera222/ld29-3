@@ -29,6 +29,12 @@ public class HelloApp extends ApplicationAdapter {
     public static final int SCREEN_HEIGHT = 480;
     public static final int SCREEN_WIDTH = 800;
 
+    enum State {
+        START,
+        READY,
+        GOING
+    }
+
     private SpriteBatch batch;
     private Texture img;
     private OrthographicCamera camera;
@@ -58,6 +64,8 @@ public class HelloApp extends ApplicationAdapter {
     private Texture imgInfo;
 
     private long score;
+
+    private State state = State.START;
 
     @Override
     public void create() {
@@ -149,6 +157,7 @@ public class HelloApp extends ApplicationAdapter {
         rainMusic.play();
 
         camController = new CameraInputController(cam);
+//        camController
 
         Gdx.input.setInputProcessor(new InputMultiplexer(
                 camController,
@@ -162,43 +171,53 @@ public class HelloApp extends ApplicationAdapter {
 
                     @Override
                     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+                        super.touchDown(screenX, screenY, pointer, button);
+                        if (isInState(State.READY)) {
 
-                        swipe = new Vector3(screenX, screenY, 0);
+                            swipe = new Vector3(screenX, screenY, 0);
 
-                        Vector3 pos1 = new Vector3(0, 0, 1);
-                        pos1.prj(cam.view.cpy().inv());
+                            Vector3 pos1 = new Vector3(0, 0, 1);
+                            pos1.prj(cam.view.cpy().inv());
 //                        pos1.prj(cam.view);
 
-                        firstParticle = shootP(pos1, new Vector3());
-
-                        return super.touchDown(screenX, screenY, pointer, button);
+                            firstParticle = shootP(pos1, new Vector3());
+                        }
+                        return true;
                     }
 
                     @Override
                     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
-                        swipe.sub(screenX, screenY, 0);
-                        swipe.x *= -1;
-                        swipe.prj(cam.view.cpy().inv());
+                        super.touchUp(screenX, screenY, pointer, button);
+                        if (isInState(State.START)) {
+                            state = State.READY;
+                        } else if (isInState(State.READY)) {
+
+                            swipe.sub(screenX, screenY, 0);
+                            swipe.x *= -1;
+                            swipe.prj(cam.view.cpy().inv());
 //                        cam.unproject(swipe);
-                        swipe.nor();
+                            swipe.nor();
 //                        shootP(getRandomVector(), getRandomVector());
-                        firstParticle.setDirection(swipe);
+                            firstParticle.setDirection(swipe);
 
 //                        float pan = (2f * screenX / Gdx.graphics.getWidth()) - 1;
 //                        Gdx.app.log("touch ", "pan " + pan);
 //                        dropSound.play((float) screenY / Gdx.graphics.getHeight(), 1, pan);
-                        playHitSound(firstParticle.pos, cam);
+                            playHitSound(firstParticle.pos, cam);
 
-                        {
+                            state = State.GOING;
+
+                        } else if (isInState(State.GOING)) {
                             Vector3 touchPos = new Vector3();
                             touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
                             camera.unproject(touchPos);
                             if (SCREEN_WIDTH - 64 < touchPos.x && SCREEN_HEIGHT - 64 < touchPos.y) {
                                 reset();
+                                state = State.READY;
                             }
                         }
 //                        shootP(new Vector3(0, 0, 1), swipe);
-                        return super.touchUp(screenX, screenY, pointer, button);
+                        return true;
                     }
                 }));
 
@@ -380,10 +399,23 @@ public class HelloApp extends ApplicationAdapter {
 //        batch.
 //        batch.draw(imgfg, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         batch.draw(imgfg, 0, 0, SCREEN_WIDTH, SCREEN_WIDTH);
-        batch.draw(imgReset, SCREEN_WIDTH - 64, SCREEN_HEIGHT - 64, 64, 64);
-        drawScore();
-        batch.draw(imgInfo, 0, 0, SCREEN_WIDTH, SCREEN_WIDTH);
+        if (isInState(State.GOING)) {
+            batch.draw(imgReset, SCREEN_WIDTH - 64, SCREEN_HEIGHT - 64, 64, 64);
+            drawScore();
+        }
+        if (isInState(State.START)) {
+            batch.draw(imgInfo, 0, 0, SCREEN_WIDTH, SCREEN_WIDTH);
+        }
         batch.end();
+    }
+
+    private boolean isInState(State... states) {
+        for (State s : states) {
+            if (s == state) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void drawScore() {
