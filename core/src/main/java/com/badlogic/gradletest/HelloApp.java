@@ -38,17 +38,23 @@ public class HelloApp extends ApplicationAdapter {
      * The size of newly generated speed after collision.
      */
     public static final float CONFIG_ENERGY_NEW = 0.66f;
-    public static final float CONFIG_CRASH_DISTANCE = 1f;
+    public static final float CONFIG_CRASH_DISTANCE = 0.3f;
     public static final int CONFIG_NUM_SPAWNED_PARTICLES = 3;
+    /**
+     * true iff old crashed particle shall be kept
+     */
+    public static final boolean CONFIG_KEEP_PARTICLE = false;
     // particle size
-    public static final float P_SIZE = 0.5f;
+    public static final float P_SIZE = 0.3f;
     // target size
-    public static final float SIZE_T = 1f;
+    public static final float SIZE_T = 0.5f;
+    public static final int CONFIG_INITIAL_NUM_TARGETS = 33;
+
 
     enum State {
         START,
         READY,
-        GOING;
+        GOING
     }
 
     private SpriteBatch batch;
@@ -82,6 +88,10 @@ public class HelloApp extends ApplicationAdapter {
     private long score;
 
     private State state = State.START;
+
+    private int[] counts = new int[2];
+
+    private long time = 0;
 
     @Override
     public void create() {
@@ -243,13 +253,15 @@ public class HelloApp extends ApplicationAdapter {
     }
 
     private void reset() {
+        time = 0;
         score = 0;
         things.clear();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < CONFIG_INITIAL_NUM_TARGETS; i++) {
             Thing t = new Thing(TYPE_BASIC);
 //            t.setDirection(randomize(new Vector3()));
             randomize(t.pos, 1f);
             t.adjustToSphere();
+            t.setDirection(getRandomVector(0.01f));
             things.add(t);
         }
     }
@@ -340,13 +352,20 @@ public class HelloApp extends ApplicationAdapter {
     }
 
     private void updateThings() {
+        for (int i = 0; i < counts.length; i++) {
+            counts[i] = 0;
+        }
         for (Iterator<Thing> iterator = things.iterator(); iterator.hasNext(); ) {
             Thing thing = iterator.next();
             if (thing.dead) {
                 iterator.remove();
             } else {
+                counts[thing.type]++;
                 thing.update();
             }
+        }
+        if (counts[TYPE_BASIC] > 0) {
+            time++;
         }
     }
 
@@ -435,7 +454,17 @@ public class HelloApp extends ApplicationAdapter {
     }
 
     private void drawScore() {
-        bitmapFont.draw(batch, "particles: " + score, 30, 450);
+        int targetsCount = counts[TYPE_BASIC];
+        bitmapFont.draw(batch, "particles: " + counts[TYPE_P], 32, SCREEN_HEIGHT - 32);
+        bitmapFont.draw(batch, "targets:   " + targetsCount, 32, SCREEN_HEIGHT - 2 * 32);
+        bitmapFont.draw(batch, "time:      " + time, 32, SCREEN_HEIGHT - 3 * 32);
+
+        int percent = 100 * (CONFIG_INITIAL_NUM_TARGETS - targetsCount) / CONFIG_INITIAL_NUM_TARGETS;
+        bitmapFont.draw(batch, "progress: " + percent + "%", 32, SCREEN_HEIGHT - 4 * 32);
+
+        if (targetsCount <= 0) {
+            bitmapFont.draw(batch, "COMPLETED!", 32, SCREEN_HEIGHT - 5 * 32);
+        }
     }
 
     private void drawShapes() {
@@ -518,7 +547,10 @@ public class HelloApp extends ApplicationAdapter {
 
             playHitSound(thingT.pos, cam);
 
-            thingP.dead = true;
+            if (!CONFIG_KEEP_PARTICLE) {
+                thingP.dead = true;
+                score--;
+            }
             thingT.dead = true;
 
             flash += 1f;
