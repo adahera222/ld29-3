@@ -23,11 +23,16 @@ import java.util.List;
 public class HelloApp extends ApplicationAdapter {
 
     public static final int RADIUS = 8;
+
     public static final int TYPE_BASIC = 0;
     public static final int TYPE_P = 1;
+
     public static final float P_SIZE = 0.5f;
     public static final int SCREEN_HEIGHT = 480;
     public static final int SCREEN_WIDTH = 800;
+
+    public static final float CONFIG_RETAIN_ENERGY_FRACTION = 0.5f;
+    public static final float CONFIG_ENERGY_NEW = 0.66f;
 
     enum State {
         START,
@@ -287,7 +292,7 @@ public class HelloApp extends ApplicationAdapter {
 
         updateThings();
 
-        checkCollicions1();
+        checkCollisions1();
 
         checkCollisionsP();
 
@@ -315,7 +320,7 @@ public class HelloApp extends ApplicationAdapter {
 
         drawForeground();
 
-        drawShapes();
+//        drawShapes();
 
 //        drawFlashes(flash);
 
@@ -334,7 +339,7 @@ public class HelloApp extends ApplicationAdapter {
         }
     }
 
-    private void checkCollicions1() {
+    private void checkCollisions1() {
         for (int i = 0; i < things.size(); i++) {
             Thing thing1 = things.get(i);
             for (int j = i + 1; j < things.size(); j++) {
@@ -347,12 +352,12 @@ public class HelloApp extends ApplicationAdapter {
     private void checkCollisionsP() {
         final List<Thing> snapshot = new ArrayList<Thing>(things);
 
-        for (Thing thingp : snapshot) {
+        for (Thing thingP : snapshot) {
 
-            if (thingp.type == TYPE_P) {
-                for (Thing thingt : snapshot) {
-                    if (thingt.type == TYPE_BASIC) {
-                        collisionP(thingp, thingt);
+            if (thingP.type == TYPE_P) {
+                for (Thing thingT : snapshot) {
+                    if (thingT.type == TYPE_BASIC) {
+                        collisionP(thingP, thingT);
                     }
                 }
             }
@@ -488,25 +493,32 @@ public class HelloApp extends ApplicationAdapter {
     }
 
     /**
-     * @param thingp projectile
-     * @param thingt target - what is being hit
+     * @param thingP projectile
+     * @param thingT target - what is being hit
      */
-    private void collisionP(Thing thingp, Thing thingt) {
-        assert thingp.type == TYPE_P;
-        assert thingt.type == TYPE_BASIC;
-        if (thingp.pos.dst2(thingt.pos) < 1) {
+    private void collisionP(Thing thingP, Thing thingT) {
+        assert thingP.type == TYPE_P;
+        assert thingT.type == TYPE_BASIC;
+        if (thingT.dead) {
+            return;
+        }
+        if (thingP.pos.dst2(thingT.pos) < 1) {
 
-            playHitSound(thingt.pos, cam);
+            playHitSound(thingT.pos, cam);
 
-            thingp.dead = true;
-            thingt.dead = true;
+            thingP.dead = true;
+            thingT.dead = true;
 
             flash += 1f;
 
-            Vector3 direction = thingp.getDirection(new Vector3());
+            Vector3 direction = thingP.getDirection(new Vector3());
+            direction.scl(CONFIG_RETAIN_ENERGY_FRACTION);
+
+//          retained energy:
+//           shootP(thingt.pos, direction);
 
             for (int i = 0; i < 3; i++) {
-                shootP(thingt.pos, getRandomVector(1f).add(direction));
+                shootP(thingT.pos, getRandomVector(CONFIG_ENERGY_NEW).add(direction));
                 score++;
             }
 
@@ -606,7 +618,10 @@ public class HelloApp extends ApplicationAdapter {
          */
         public Vector3 getDirection(Vector3 direction) {
             // predict move to find the direction
-            return direction.set(pos).mul(quatv).sub(pos);
+            direction.set(pos).mul(quatv).sub(pos);
+            // apply correction from length per step to angular speed in degrees per step
+            direction.scl(180f / (MathUtils.PI * RADIUS));
+            return direction;
         }
 
 
