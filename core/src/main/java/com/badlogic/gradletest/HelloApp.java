@@ -27,17 +27,28 @@ public class HelloApp extends ApplicationAdapter {
     public static final int TYPE_BASIC = 0;
     public static final int TYPE_P = 1;
 
-    public static final float P_SIZE = 0.5f;
     public static final int SCREEN_HEIGHT = 480;
     public static final int SCREEN_WIDTH = 800;
-
+    /**
+     * The fraction of original speed/direction retained after collision.
+     */
     public static final float CONFIG_RETAIN_ENERGY_FRACTION = 0.5f;
+
+    /**
+     * The size of newly generated speed after collision.
+     */
     public static final float CONFIG_ENERGY_NEW = 0.66f;
+    public static final float CONFIG_CRASH_DISTANCE = 1f;
+    public static final int CONFIG_NUM_SPAWNED_PARTICLES = 3;
+    // particle size
+    public static final float P_SIZE = 0.5f;
+    // target size
+    public static final float SIZE_T = 1f;
 
     enum State {
         START,
         READY,
-        GOING
+        GOING;
     }
 
     private SpriteBatch batch;
@@ -139,7 +150,7 @@ public class HelloApp extends ApplicationAdapter {
 
         thingMaterial = new Material(ColorAttribute.createDiffuse(Color.GREEN));
 
-        model = modelBuilder.createBox(1f, 1f, 1f,
+        model = modelBuilder.createBox(SIZE_T, SIZE_T, SIZE_T,
                 thingMaterial,
                 VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         instance = new ModelInstance(model);
@@ -500,9 +511,10 @@ public class HelloApp extends ApplicationAdapter {
         assert thingP.type == TYPE_P;
         assert thingT.type == TYPE_BASIC;
         if (thingT.dead) {
-            return;
+//  continue - lets have bigger bonus
+// return;
         }
-        if (thingP.pos.dst2(thingT.pos) < 1) {
+        if (thingP.pos.dst2(thingT.pos) < CONFIG_CRASH_DISTANCE * CONFIG_CRASH_DISTANCE) {
 
             playHitSound(thingT.pos, cam);
 
@@ -517,7 +529,7 @@ public class HelloApp extends ApplicationAdapter {
 //          retained energy:
 //           shootP(thingt.pos, direction);
 
-            for (int i = 0; i < 3; i++) {
+            for (int i = 0; i < CONFIG_NUM_SPAWNED_PARTICLES; i++) {
                 shootP(thingT.pos, getRandomVector(CONFIG_ENERGY_NEW).add(direction));
                 score++;
             }
