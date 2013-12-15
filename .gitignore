@@ -18,3 +18,5 @@ bin/
 out/
 gen/
 local.properties
+classes/
+*.xcf
