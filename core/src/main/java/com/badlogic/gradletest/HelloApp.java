@@ -48,6 +48,8 @@ public class HelloApp extends ApplicationAdapter {
     private Model projectileModel;
 
     float flash = 0;
+    private Vector3 swipe;
+    private HelloApp.Thing firstParticle;
 
     @Override
     public void create() {
@@ -67,7 +69,8 @@ public class HelloApp extends ApplicationAdapter {
         camera.setToOrtho(false, 800, 480);
 
         cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        cam.position.set(10f, 10f, 10f);
+//        cam.position.set(10f, 10f, 10f);
+        cam.position.set(0f, 0f, 15f);
         cam.lookAt(0, 0, 0);
         cam.near = 0.1f;
         cam.far = 300f;
@@ -128,7 +131,6 @@ public class HelloApp extends ApplicationAdapter {
                 VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
 
 
-
         // start the playback of the background music immediately
         rainMusic.setLooping(true);
         rainMusic.play();
@@ -147,15 +149,37 @@ public class HelloApp extends ApplicationAdapter {
 
                     @Override
                     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
-                        float pan = (2f * screenX / Gdx.graphics.getWidth()) - 1;
-                        Gdx.app.log("touch ", "pan " + pan);
-                        dropSound.play((float) screenY / Gdx.graphics.getHeight(), 1, pan);
 
-                        shootP(getRandomVector(), getRandomVector());
+                        swipe = new Vector3(screenX, screenY, 0);
+
+                        Vector3 pos1 = new Vector3(0, 0, 1);
+                        pos1.prj(cam.view.cpy().inv());
+//                        pos1.prj(cam.view);
+
+                        firstParticle = shootP(pos1, new Vector3());
+
                         return super.touchDown(screenX, screenY, pointer, button);
                     }
-                }));
 
+                    @Override
+                    public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+                        swipe.sub(screenX, screenY, 0);
+                        swipe.x *= -1;
+                        swipe.prj(cam.view.cpy().inv());
+//                        cam.unproject(swipe);
+                        swipe.nor();
+//                        shootP(getRandomVector(), getRandomVector());
+                        firstParticle.setDirection(swipe);
+
+//                        float pan = (2f * screenX / Gdx.graphics.getWidth()) - 1;
+//                        Gdx.app.log("touch ", "pan " + pan);
+//                        dropSound.play((float) screenY / Gdx.graphics.getHeight(), 1, pan);
+                        playHitSound(firstParticle.pos, cam);
+
+//                        shootP(new Vector3(0, 0, 1), swipe);
+                        return super.touchUp(screenX, screenY, pointer, button);
+                    }
+                }));
 
 
         for (int i = 0; i < 10; i++) {
@@ -185,7 +209,7 @@ public class HelloApp extends ApplicationAdapter {
         Gdx.gl.glEnable(GL10.GL_BLEND);
         Gdx.gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA);
 
-        Gdx.gl.glClearColor(0.5f*flash, 0.7f+0.5f*flash, 0.6f+0.5f*flash, 0.0f);
+        Gdx.gl.glClearColor(0.5f * flash, 0.7f + 0.5f * flash, 0.6f + 0.5f * flash, 0.0f);
 //		Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
         Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT
 //                | GL10.GL_ALPHA_BITS
@@ -245,7 +269,7 @@ public class HelloApp extends ApplicationAdapter {
 
         drawFlashes(flash);
 
-        flash*= 0.95f;
+        flash *= 0.95f;
 
     }
 
@@ -410,19 +434,20 @@ public class HelloApp extends ApplicationAdapter {
             flash += 1f;
 
             for (int i = 0; i < 3; i++) {
-                shootP(thingt.pos, thingt.getDirection(new Vector3()));
+                shootP(thingt.pos, thingt.getDirection(new Vector3()).add(getRandomVector()));
             }
 
         }
     }
 
-    private void shootP(Vector3 from, Vector3 direction) {
+    private Thing shootP(Vector3 from, Vector3 direction) {
         Thing t = new Thing(TYPE_P);
 //            t.setDirection(randomize(new Vector3()));
         t.pos.set(from);
         t.adjustToSphere();
-        t.setDirection(getRandomVector().add(direction));
+        t.setDirection(direction);
         things.add(t);
+        return t;
     }
 
     /**
