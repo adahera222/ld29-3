@@ -185,7 +185,7 @@ public class HelloApp extends ApplicationAdapter {
         for (int i = 0; i < 10; i++) {
             Thing t = new Thing(TYPE_BASIC);
 //            t.setDirection(randomize(new Vector3()));
-            randomize(t.pos);
+            randomize(t.pos, 1f);
             t.adjustToSphere();
             things.add(t);
         }
@@ -193,7 +193,11 @@ public class HelloApp extends ApplicationAdapter {
     }
 
     private Vector3 getRandomVector() {
-        return randomize(new Vector3());
+        return getRandomVector(1f);
+    }
+
+    private Vector3 getRandomVector(float m) {
+        return randomize(new Vector3(), m);
     }
 
     @Override
@@ -231,9 +235,9 @@ public class HelloApp extends ApplicationAdapter {
         drawBackground();
 
         batch.setProjectionMatrix(camera.combined);
-        batch.begin();
-        batch.draw(img, bucket.x, bucket.y);
-        batch.end();
+//        batch.begin();
+//        batch.draw(img, bucket.x, bucket.y);
+//        batch.end();
 
         updateThings();
 
@@ -241,21 +245,21 @@ public class HelloApp extends ApplicationAdapter {
 
         checkCollisionsP();
 
-        modelBatch.begin(cam);
+//        modelBatch.begin(cam);
 
-        instance.transform.idt();
-        modelBatch.render(instance, environment);
-
-        instance.transform.setToTranslation(1, 0, 0);
-        modelBatch.render(instance, environment);
-
-        instance.transform.setToTranslation(0, 0, 1);
-        modelBatch.render(instance, environment);
-
-        instance.transform.setToTranslation(2, 0, 0);
-        modelBatch.render(instance, environment);
-
-        modelBatch.end();
+//        instance.transform.idt();
+//        modelBatch.render(instance, environment);
+//
+//        instance.transform.setToTranslation(1, 0, 0);
+//        modelBatch.render(instance, environment);
+//
+//        instance.transform.setToTranslation(0, 0, 1);
+//        modelBatch.render(instance, environment);
+//
+//        instance.transform.setToTranslation(2, 0, 0);
+//        modelBatch.render(instance, environment);
+//
+//        modelBatch.end();
 
 //        instance.materials.
 
@@ -433,8 +437,10 @@ public class HelloApp extends ApplicationAdapter {
 
             flash += 1f;
 
+            Vector3 direction = thingp.getDirection(new Vector3());
+
             for (int i = 0; i < 3; i++) {
-                shootP(thingt.pos, thingt.getDirection(new Vector3()).add(getRandomVector()));
+                shootP(thingt.pos, getRandomVector(1f).add(direction));
             }
 
         }
@@ -469,8 +475,8 @@ public class HelloApp extends ApplicationAdapter {
         dropSound.play(volume, 1, camPos.x);
     }
 
-    private Vector3 randomize(Vector3 random) {
-        return random.set(MathUtils.random(-1f, 1f), MathUtils.random(-1f, 1f), MathUtils.random(-1f, 1f));
+    private Vector3 randomize(Vector3 random, float m) {
+        return random.set(MathUtils.random(-m, m), MathUtils.random(-m, m), MathUtils.random(-m, m));
     }
 
     class Thing {
