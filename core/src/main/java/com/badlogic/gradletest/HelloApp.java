@@ -5,6 +5,7 @@ import com.badlogic.gdx.*;
 import com.badlogic.gdx.audio.Music;
 import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.*;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g3d.*;
 import com.badlogic.gdx.graphics.g3d.attributes.ColorAttribute;
@@ -25,6 +26,8 @@ public class HelloApp extends ApplicationAdapter {
     public static final int TYPE_BASIC = 0;
     public static final int TYPE_P = 1;
     public static final float P_SIZE = 0.5f;
+    public static final int SCREEN_HEIGHT = 480;
+    public static final int SCREEN_WIDTH = 800;
 
     private SpriteBatch batch;
     private Texture img;
@@ -47,9 +50,14 @@ public class HelloApp extends ApplicationAdapter {
     private ShapeRenderer shapeRenderer;
     private Model projectileModel;
 
-    float flash = 0;
+    private float flash = 0;
     private Vector3 swipe;
     private HelloApp.Thing firstParticle;
+    private BitmapFont bitmapFont;
+    private Texture imgReset;
+    private Texture imgInfo;
+
+    private long score;
 
     @Override
     public void create() {
@@ -58,6 +66,11 @@ public class HelloApp extends ApplicationAdapter {
         shapeRenderer = new ShapeRenderer();
         img = new Texture("background.png");
         imgfg = new Texture("foreground.png");
+        imgReset = new Texture("reset.png");
+        imgInfo = new Texture("info.png");
+
+        bitmapFont = new BitmapFont();
+
 //		try {
 //			new FreeTypeFontGenerator(Gdx.files.internal("test.fnt"));
 //		} catch(Exception e) {
@@ -66,7 +79,7 @@ public class HelloApp extends ApplicationAdapter {
 //		Bullet.init();
 
         camera = new OrthographicCamera();
-        camera.setToOrtho(false, 800, 480);
+        camera.setToOrtho(false, SCREEN_WIDTH, SCREEN_HEIGHT);
 
         cam = new PerspectiveCamera(67, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 //        cam.position.set(10f, 10f, 10f);
@@ -77,7 +90,7 @@ public class HelloApp extends ApplicationAdapter {
         cam.update();
 
         bucket = new Rectangle();
-        bucket.x = 800 / 2 - 64 / 2;
+        bucket.x = SCREEN_WIDTH / 2 - 64 / 2;
         bucket.y = 20;
         bucket.width = 64;
         bucket.height = 64;
@@ -176,12 +189,27 @@ public class HelloApp extends ApplicationAdapter {
 //                        dropSound.play((float) screenY / Gdx.graphics.getHeight(), 1, pan);
                         playHitSound(firstParticle.pos, cam);
 
+                        {
+                            Vector3 touchPos = new Vector3();
+                            touchPos.set(Gdx.input.getX(), Gdx.input.getY(), 0);
+                            camera.unproject(touchPos);
+                            if (SCREEN_WIDTH - 64 < touchPos.x && SCREEN_HEIGHT - 64 < touchPos.y) {
+                                reset();
+                            }
+                        }
 //                        shootP(new Vector3(0, 0, 1), swipe);
                         return super.touchUp(screenX, screenY, pointer, button);
                     }
                 }));
 
 
+        reset();
+
+    }
+
+    private void reset() {
+        score = 0;
+        things.clear();
         for (int i = 0; i < 10; i++) {
             Thing t = new Thing(TYPE_BASIC);
 //            t.setDirection(randomize(new Vector3()));
@@ -189,7 +217,6 @@ public class HelloApp extends ApplicationAdapter {
             t.adjustToSphere();
             things.add(t);
         }
-
     }
 
     private Vector3 getRandomVector() {
@@ -230,7 +257,7 @@ public class HelloApp extends ApplicationAdapter {
         if (Gdx.input.isKeyPressed(Input.Keys.RIGHT)) bucket.x += 200 * Gdx.graphics.getDeltaTime();
 
         if (bucket.x < 0) bucket.x = 0;
-        if (bucket.x > 800 - 64) bucket.x = 800 - 64;
+        if (bucket.x > SCREEN_WIDTH - 64) bucket.x = SCREEN_WIDTH - 64;
 
         drawBackground();
 
@@ -271,7 +298,7 @@ public class HelloApp extends ApplicationAdapter {
 
         drawShapes();
 
-        drawFlashes(flash);
+//        drawFlashes(flash);
 
         flash *= 0.95f;
 
@@ -343,7 +370,7 @@ public class HelloApp extends ApplicationAdapter {
     private void drawBackground() {
         batch.begin();
 //        batch.draw(img, 0, 0);
-        batch.draw(img, 0, 0, 800, 480);
+        batch.draw(img, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
         batch.end();
     }
 
@@ -352,8 +379,15 @@ public class HelloApp extends ApplicationAdapter {
         batch.begin();
 //        batch.
 //        batch.draw(imgfg, 0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        batch.draw(imgfg, 0, 0, 800, 480);
+        batch.draw(imgfg, 0, 0, SCREEN_WIDTH, SCREEN_WIDTH);
+        batch.draw(imgReset, SCREEN_WIDTH - 64, SCREEN_HEIGHT - 64, 64, 64);
+        drawScore();
+        batch.draw(imgInfo, 0, 0, SCREEN_WIDTH, SCREEN_WIDTH);
         batch.end();
+    }
+
+    private void drawScore() {
+        bitmapFont.draw(batch, "particles: " + score, 30, 450);
     }
 
     private void drawShapes() {
@@ -441,6 +475,7 @@ public class HelloApp extends ApplicationAdapter {
 
             for (int i = 0; i < 3; i++) {
                 shootP(thingt.pos, getRandomVector(1f).add(direction));
+                score++;
             }
 
         }
