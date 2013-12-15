@@ -24,6 +24,7 @@ public class HelloApp extends ApplicationAdapter {
     public static final int RADIUS = 8;
     public static final int TYPE_BASIC = 0;
     public static final int TYPE_P = 1;
+    public static final float P_SIZE = 0.5f;
 
     private SpriteBatch batch;
     private Texture img;
@@ -44,6 +45,9 @@ public class HelloApp extends ApplicationAdapter {
     private Material thingMaterial;
     private Texture imgfg;
     private ShapeRenderer shapeRenderer;
+    private Model projectileModel;
+
+    float flash = 0;
 
     @Override
     public void create() {
@@ -94,14 +98,6 @@ public class HelloApp extends ApplicationAdapter {
 //        e4.getDirection(direction);
 //        things.add(e4);
 
-        for (int i = 0; i < 10; i++) {
-            Thing t = new Thing();
-//            t.setDirection(randomize(new Vector3()));
-            randomize(t.pos);
-            t.adjustToSphere();
-            things.add(t);
-        }
-
         // load the drop sound effect and the rain background "music"
         dropSound = Gdx.audio.newSound(Gdx.files.internal("clap.wav"));
         rainMusic = Gdx.audio.newMusic(Gdx.files.internal("noise.wav")); // can be mp3
@@ -121,9 +117,17 @@ public class HelloApp extends ApplicationAdapter {
 
         sphereModel = modelBuilder.createSphere(3f, 3f, 3f, 20, 20,
 //                new Material(ColorAttribute.createDiffuse(Color.ORANGE)),
-                new Material(ColorAttribute.createDiffuse(1, 1, 0, 0.1f)),
+                new Material(ColorAttribute.createDiffuse(1, 1, 0, 0.5f)),
                 VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
         sphereInstance = new ModelInstance(sphereModel);
+
+
+        projectileModel = modelBuilder.createSphere(P_SIZE, P_SIZE, P_SIZE, 5, 5,
+                new Material(ColorAttribute.createDiffuse(Color.RED)),
+//                new Material(ColorAttribute.createDiffuse(1, 1, 0, 0.1f)),
+                VertexAttributes.Usage.Position | VertexAttributes.Usage.Normal);
+
+
 
         // start the playback of the background music immediately
         rainMusic.setLooping(true);
@@ -146,11 +150,22 @@ public class HelloApp extends ApplicationAdapter {
                         float pan = (2f * screenX / Gdx.graphics.getWidth()) - 1;
                         Gdx.app.log("touch ", "pan " + pan);
                         dropSound.play((float) screenY / Gdx.graphics.getHeight(), 1, pan);
+
+                        shootP(getRandomVector(), getRandomVector());
                         return super.touchDown(screenX, screenY, pointer, button);
                     }
                 }));
 
-        shootP(getRandomVector());
+
+
+        for (int i = 0; i < 10; i++) {
+            Thing t = new Thing(TYPE_BASIC);
+//            t.setDirection(randomize(new Vector3()));
+            randomize(t.pos);
+            t.adjustToSphere();
+            things.add(t);
+        }
+
     }
 
     private Vector3 getRandomVector() {
@@ -170,7 +185,7 @@ public class HelloApp extends ApplicationAdapter {
         Gdx.gl.glEnable(GL10.GL_BLEND);
         Gdx.gl.glBlendFunc(GL10.GL_SRC_ALPHA, GL10.GL_ONE_MINUS_SRC_ALPHA);
 
-        Gdx.gl.glClearColor(0.5f, 0, 0.5f, 0.0f);
+        Gdx.gl.glClearColor(0.5f*flash, 0.7f+0.5f*flash, 0.6f+0.5f*flash, 0.0f);
 //		Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT);
         Gdx.gl.glClear(GL10.GL_COLOR_BUFFER_BIT | GL10.GL_DEPTH_BUFFER_BIT
 //                | GL10.GL_ALPHA_BITS
@@ -227,6 +242,11 @@ public class HelloApp extends ApplicationAdapter {
         drawForeground();
 
         drawShapes();
+
+        drawFlashes(flash);
+
+        flash*= 0.95f;
+
     }
 
     private void updateThings() {
@@ -270,11 +290,11 @@ public class HelloApp extends ApplicationAdapter {
         modelBatch.begin(cam);
 
         for (Thing thing : things) {
-            if (frame % 60 == 0) {
-                instance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), MathUtils.random())));
-            }
-            thing.getTransform(instance.transform);
-            modelBatch.render(instance, environment);
+//            if (frame % 60 == 0) {
+//                thing.modelInstance.materials.get(0).set(ColorAttribute.createDiffuse(new Color(MathUtils.random(), MathUtils.random(), MathUtils.random(), MathUtils.random())));
+//            }
+            thing.getTransform(thing.modelInstance.transform);
+            modelBatch.render(thing.modelInstance, environment);
         }
 
         modelBatch.end();
@@ -283,10 +303,12 @@ public class HelloApp extends ApplicationAdapter {
     private void drawCore() {
         //        if (frame % 2 == 1)
         {
+            Gdx.gl.glEnable(GL10.GL_BLEND);
             modelBatch.begin(cam);
             sphereInstance.transform.setToScaling(2, 2, 2);
             modelBatch.render(sphereInstance, environment);
             modelBatch.end();
+            Gdx.gl.glDisable(GL10.GL_BLEND);
         }
     }
 
@@ -329,6 +351,29 @@ public class HelloApp extends ApplicationAdapter {
         shapeRenderer.end();
     }
 
+    private void drawFlashes(float flash) {
+        float x = 5;
+        float y = 5;
+        float x2 = 10;
+        float y2 = 10;
+        float radius = 3;
+        float width = 100;
+        float height = 100;
+
+
+//            shapeRenderer.setProjectionMatrix(camera.combined);
+        shapeRenderer.setProjectionMatrix(camera.combined);
+
+        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
+        shapeRenderer.setColor(flash, 1, 0, flash);
+
+//        shapeRenderer.line(x, y, x2, y2);
+//        shapeRenderer.line(x, y, 1, x2, y2, 1);
+        shapeRenderer.rect(x, y, width, height);
+        shapeRenderer.circle(x, y, radius);
+        shapeRenderer.end();
+    }
+
     private void collision(Thing thing1, Thing thing2) {
         if (thing1 == thing2) {
             return;
@@ -362,20 +407,21 @@ public class HelloApp extends ApplicationAdapter {
             thingp.dead = true;
             thingt.dead = true;
 
+            flash += 1f;
+
             for (int i = 0; i < 3; i++) {
-                shootP(thingt.pos);
+                shootP(thingt.pos, thingt.getDirection(new Vector3()));
             }
 
         }
     }
 
-    private void shootP(Vector3 from) {
-        Thing t = new Thing();
-        t.type = TYPE_P;
+    private void shootP(Vector3 from, Vector3 direction) {
+        Thing t = new Thing(TYPE_P);
 //            t.setDirection(randomize(new Vector3()));
         t.pos.set(from);
         t.adjustToSphere();
-        t.setDirection(getRandomVector());
+        t.setDirection(getRandomVector().add(direction));
         things.add(t);
     }
 
@@ -407,10 +453,21 @@ public class HelloApp extends ApplicationAdapter {
         final Quaternion quat = new Quaternion();
         final Quaternion quatv = new Quaternion();
 
-        int type = 0;
+        final int type;
         boolean dead = false;
 
-        Thing() {
+        ModelInstance modelInstance;
+
+        Thing(int type) {
+            this.type = type;
+            switch (type) {
+                case TYPE_BASIC:
+                    modelInstance = new ModelInstance(model);
+                    break;
+                case TYPE_P:
+                    modelInstance = new ModelInstance(projectileModel);
+                    break;
+            }
         }
 
         public void update() {
@@ -449,9 +506,9 @@ public class HelloApp extends ApplicationAdapter {
          *
          * @param direction
          */
-        public void getDirection(Vector3 direction) {
+        public Vector3 getDirection(Vector3 direction) {
             // predict move to find the direction
-            direction.set(pos).mul(quatv).sub(pos);
+            return direction.set(pos).mul(quatv).sub(pos);
         }
 
 
